@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -39,9 +40,9 @@ class DISCARD_Test extends PredisCommandTestCase
     public function testFilterArguments(): void
     {
         $command = $this->getCommand();
-        $command->setArguments(array());
+        $command->setArguments([]);
 
-        $this->assertSame(array(), $command->getArguments());
+        $this->assertSame([], $command->getArguments());
     }
 
     /**
@@ -54,6 +55,7 @@ class DISCARD_Test extends PredisCommandTestCase
 
     /**
      * @group connected
+     * @group relay-incompatible
      * @requiresRedisVersion >= 2.0.0
      */
     public function testAbortsTransactionAndRestoresNormalFlow(): void
@@ -69,12 +71,28 @@ class DISCARD_Test extends PredisCommandTestCase
 
     /**
      * @group connected
+     * @group ext-relay
+     */
+    public function testAbortsTransactionAndRestoresNormalFlowUsingRelay(): void
+    {
+        $redis = $this->getClient();
+        $relay = $redis->getConnection()->getClient();
+
+        $redis->multi();
+
+        $this->assertSame($relay, $redis->set('foo', 'bar'));
+        $this->assertTrue($redis->discard());
+        $this->assertSame(0, $redis->exists('foo'));
+    }
+
+    /**
+     * @group connected
      * @requiresRedisVersion >= 2.0.0
      */
     public function testThrowsExceptionWhenCallingOutsideTransaction(): void
     {
         $this->expectException('Predis\Response\ServerException');
-        $this->expectExceptionMessage('ERR DISCARD without MULTI');
+        $this->expectExceptionMessage('DISCARD without MULTI');
 
         $redis = $this->getClient();
 

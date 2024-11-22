@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class MOVE_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('key', 10);
-        $expected = array('key', 10);
+        $arguments = ['key', 10];
+        $expected = ['key', 10];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -60,12 +61,11 @@ class MOVE_Test extends PredisCommandTestCase
 
     /**
      * @group connected
-     *
      * @todo Should be improved, this test fails when REDIS_SERVER_DBNUM is 0.
      */
     public function testMovesKeysToDifferentDatabases(): void
     {
-        $db = REDIS_SERVER_DBNUM - 1;
+        $db = REDIS_SERVER_DBNUM + 1;
         $redis = $this->getClient();
 
         $redis->set('foo', 'bar');

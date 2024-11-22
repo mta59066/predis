@@ -27,7 +27,7 @@ line test runner. Please note that due to a bug in PHPUnit, older versions ignor
 option when the group is excluded in the XML configuration file. More details about this issue are
 available on [PHPUnit's bug tracker](http://github.com/sebastianbergmann/phpunit/issues/320).
 
-Certain groups of tests requiring native extensions, such as `ext-curl` or `ext-phpiredis`, are
+Certain groups of tests requiring native extensions, such as `ext-relay`, are
 disabled by default in the configuration file. To enable these groups of tests you should remove
 them from the exclusion list in `phpunit.xml`.
 
@@ -94,4 +94,4 @@ matches its group, as defined by the Redis documentation. Valid realms are:
 
 When unsure about which value to use for `--realm` for a specific command, you can just infer it by
 searching in [`commands.json`](https://github.com/redis/redis-doc/blob/master/commands.json) for the
-`group` attribute of the corrisponding command as use its value.
+`group` attribute of the corresponding command as use its value.

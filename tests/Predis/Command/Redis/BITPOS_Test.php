@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class BITPOS_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('key', 0, 1, 10);
-        $expected = array('key', 0, 1, 10);
+        $arguments = ['key', 0, 1, 10];
+        $expected = ['key', 0, 1, 10];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -76,6 +77,25 @@ class BITPOS_Test extends PredisCommandTestCase
         $this->assertSame(0, $redis->bitpos('key', 0), 'Get position of first bit set to 0 - full range');
         $this->assertSame(5, $redis->bitpos('key', 1), 'Get position of first bit set to 1 - full range');
         $this->assertSame(-1, $redis->bitpos('key', 1, 5, 10), 'Get position of first bit set to 1 - specific range');
+    }
+
+    /**
+     * @group connected
+     * @requiresRedisVersion >= 7.0.0
+     */
+    public function testReturnsBitPositionWithExplicitBitByteArgument(): void
+    {
+        $redis = $this->getClient();
+
+        $redis->setbit('key', 10, 0);
+        $this->assertSame(0, $redis->bitpos('key', 0, 0, 10, 'bit'), 'Get position of first bit set to 0 - full range');
+        $this->assertSame(-1, $redis->bitpos('key', 1, 0, 10, 'bit'), 'Get position of first bit set to 1 - full range');
+        $this->assertSame(-1, $redis->bitpos('key', 1, 5, 10, 'bit'), 'Get position of first bit set to 1 - specific range');
+
+        $redis->setbit('key', 5, 1);
+        $this->assertSame(0, $redis->bitpos('key', 0, 0, 5, 'bit'), 'Get position of first bit set to 0 - full range');
+        $this->assertSame(5, $redis->bitpos('key', 1, 0, 5, 'bit'), 'Get position of first bit set to 1 - full range');
+        $this->assertSame(5, $redis->bitpos('key', 1, 5, 10, 'bit'), 'Get position of first bit set to 1 - specific range');
     }
 
     /**

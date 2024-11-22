@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class SELECT_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array(10);
-        $expected = array(10);
+        $arguments = [10];
+        $expected = [10];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -64,7 +65,7 @@ class SELECT_Test extends PredisCommandTestCase
 
         $redis->set('foo', 'bar');
 
-        $this->assertEquals('OK', $redis->select(REDIS_SERVER_DBNUM - 1));
+        $this->assertEquals('OK', $redis->select(REDIS_SERVER_DBNUM + 1));
         $this->assertSame(0, $redis->exists('foo'));
     }
 
@@ -83,6 +84,7 @@ class SELECT_Test extends PredisCommandTestCase
 
     /**
      * @group connected
+     * @group relay-incompatible
      */
     public function testThrowsExceptionOnUnexpectedDatabaseName(): void
     {

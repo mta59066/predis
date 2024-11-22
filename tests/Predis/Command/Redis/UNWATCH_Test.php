@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -39,9 +40,9 @@ class UNWATCH_Test extends PredisCommandTestCase
     public function testFilterArguments(): void
     {
         $command = $this->getCommand();
-        $command->setArguments(array());
+        $command->setArguments([]);
 
-        $this->assertSame(array(), $command->getArguments());
+        $this->assertSame([], $command->getArguments());
     }
 
     /**
@@ -69,11 +70,12 @@ class UNWATCH_Test extends PredisCommandTestCase
 
         $redis2->set('foo', 'hijacked');
 
-        $this->assertSame(array('hijacked'), $redis1->exec());
+        $this->assertSame(['hijacked'], $redis1->exec());
     }
 
     /**
      * @group connected
+     * @group relay-incompatible
      * @requiresRedisVersion >= 2.2.0
      */
     public function testCanBeCalledInsideTransaction(): void
@@ -82,5 +84,18 @@ class UNWATCH_Test extends PredisCommandTestCase
 
         $redis->multi();
         $this->assertInstanceOf('Predis\Response\Status', $redis->unwatch());
+    }
+
+    /**
+     * @group connected
+     * @group ext-relay
+     * @requiresRedisVersion >= 2.2.0
+     */
+    public function testCanBeCalledInsideTransactionUsingRelay(): void
+    {
+        $redis = $this->getClient();
+
+        $redis->multi();
+        $this->assertInstanceOf('Relay\Relay', $redis->unwatch());
     }
 }

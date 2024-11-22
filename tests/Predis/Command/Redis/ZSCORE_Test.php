@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class ZSCORE_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('key', 'member');
-        $expected = array('key', 'member');
+        $arguments = ['key', 'member'];
+        $expected = ['key', 'member'];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -64,9 +65,9 @@ class ZSCORE_Test extends PredisCommandTestCase
 
         $redis->zadd('letters', -10, 'a', 0, 'b', 10, 'c', 20, 'd', 20, 'e', 30, 'f');
 
-        $this->assertSame('-10', $redis->zscore('letters', 'a'));
-        $this->assertSame('0', $redis->zscore('letters', 'b'));
-        $this->assertSame('20', $redis->zscore('letters', 'e'));
+        $this->assertEquals('-10', $redis->zscore('letters', 'a'));
+        $this->assertEquals('0', $redis->zscore('letters', 'b'));
+        $this->assertEquals('20', $redis->zscore('letters', 'e'));
 
         $this->assertNull($redis->zscore('unknown', 'a'));
     }

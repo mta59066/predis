@@ -3,13 +3,16 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
+use PHPUnit\AssertSameWithPrecisionConstraint;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\OneOfConstraint;
 use PHPUnit\Util\Test as TestUtil;
 use Predis\Client;
 use Predis\Command;
@@ -18,9 +21,27 @@ use Predis\Connection;
 /**
  * Base test case class for the Predis test suite.
  */
-abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
+abstract class PredisTestCase extends PHPUnit\Framework\TestCase
 {
-    protected $redisServerVersion = null;
+    protected $redisServerVersion;
+    protected $redisJsonVersion;
+
+    /**
+     * @var string[]
+     */
+    private $modulesMapping = [
+        'json' => ['annotation' => 'requiresRedisJsonVersion', 'name' => 'ReJSON'],
+        'bloomFilter' => ['annotation' => 'requiresRedisBfVersion', 'name' => 'bf'],
+        'search' => ['annotation' => 'requiresRediSearchVersion', 'name' => 'search'],
+        'timeSeries' => ['annotation' => 'requiresRedisTimeSeriesVersion', 'name' => 'timeseries'],
+    ];
+
+    /**
+     * Info of current Redis instance.
+     *
+     * @var array
+     */
+    private $info;
 
     /**
      * {@inheritdoc}
@@ -28,6 +49,10 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     protected function setUp(): void
     {
         $this->checkRequiredRedisServerVersion();
+
+        foreach ($this->modulesMapping as $module => $config) {
+            $this->checkRequiredRedisModuleVersion($module);
+        }
     }
 
     /**
@@ -57,7 +82,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     /**
      * Ensures that two Redis commands are similar.
      *
-     * This method supports can test for different contraints by accepting a few
+     * This method supports can test for different constraints by accepting a few
      * combinations of values as indicated below:
      *
      * - a string identifying a Redis command by its ID
@@ -73,7 +98,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     public function assertRedisCommand($expected, $actual, string $message = ''): void
     {
         if (is_array($expected)) {
-            @list($command, $arguments) = $expected;
+            @[$command, $arguments] = $expected;
         } else {
             $command = $expected;
             $arguments = null;
@@ -95,15 +120,42 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Asserts that actual value is one of the values from expected array.
+     *
+     * @param  mixed  $expected Expected array.
+     * @param  mixed  $actual   Actual value. If array given searching for any matching value between two arrays.
+     * @param  string $message  Optional assertion message
+     * @return void
+     */
+    public function assertOneOf(array $expected, $actual, string $message = ''): void
+    {
+        $this->assertThat($actual, new OneOfConstraint($expected), $message);
+    }
+
+    /**
+     * Asserts that two values (of the same type) have the same values with given precision.
+     *
+     * @param  mixed  $expected  Expected value
+     * @param  mixed  $actual    Actual value
+     * @param  int    $precision Precision value should be round to
+     * @param  string $message   Optional assertion message
+     * @return void
+     */
+    public function assertSameWithPrecision($expected, $actual, int $precision = 0, string $message = ''): void
+    {
+        $this->assertThat($actual, new AssertSameWithPrecisionConstraint($expected, $precision), $message);
+    }
+
+    /**
      * Asserts that a string matches a given regular expression.
      *
      * @throws ExpectationFailedException
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @throws SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertMatchesRegularExpression(string $pattern, string $string, $message = ''): void
     {
-        if (is_callable('parent::' . __FUNCTION__)) {
-            call_user_func('parent::' . __FUNCTION__, $pattern, $string, $message);
+        if (method_exists(get_parent_class(parent::class), __FUNCTION__)) {
+            call_user_func([parent::class, __FUNCTION__], $pattern, $string, $message);
         } else {
             static::assertRegExp($pattern, $string, $message);
         }
@@ -116,12 +168,16 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
      */
     protected function getDefaultParametersArray(): array
     {
-        return array(
+        if ($this->isClusterTest()) {
+            return $this->prepareClusterEndpoints();
+        }
+
+        return [
             'scheme' => 'tcp',
             'host' => constant('REDIS_SERVER_HOST'),
             'port' => constant('REDIS_SERVER_PORT'),
             'database' => constant('REDIS_SERVER_DBNUM'),
-        );
+        ];
     }
 
     /**
@@ -131,9 +187,9 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
      */
     protected function getDefaultOptionsArray(): array
     {
-        return array(
+        return [
             'commands' => new Command\RedisFactory(),
-        );
+        ];
     }
 
     /**
@@ -157,7 +213,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
      *
      * @return Connection\ParametersInterface
      */
-    protected function getParameters($additional = array()): Connection\ParametersInterface
+    protected function getParameters($additional = []): Connection\ParametersInterface
     {
         $parameters = array_merge($this->getDefaultParametersArray(), $additional);
         $parameters = new Connection\Parameters($parameters);
@@ -191,15 +247,23 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     {
         $parameters = array_merge(
             $this->getDefaultParametersArray(),
-            $parameters ?: array()
+            $parameters ?: []
         );
 
         $options = array_merge(
-            array(
-                'commands' => $this->getCommandFactory(),
-            ),
-            $options ?: array()
+            ['commands' => $this->getCommandFactory()],
+            $options ?: [],
+            getenv('USE_RELAY') ? ['connections' => 'relay'] : []
         );
+
+        if ($this->isClusterTest()) {
+            $options = array_merge(
+                [
+                    'cluster' => 'redis',
+                ],
+                $options
+            );
+        }
 
         $client = new Client($parameters, $options);
         $client->connect();
@@ -231,7 +295,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
         if (!is_a($interface, '\Predis\Connection\NodeConnectionInterface', true)) {
             $method = __METHOD__;
 
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Argument `\$interface` for $method() expects a type implementing Predis\Connection\NodeConnectionInterface"
             );
         }
@@ -264,7 +328,6 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
      * the default connection parameters used by Predis or a set of connection
      * parameters specified in the optional second argument.
      *
-
      * @param array|string|null $parameters Optional connection parameters
      *
      * @return MockObject|Connection\NodeConnectionInterface
@@ -277,9 +340,8 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     /**
      * Returns the server version of the Redis instance used by the test suite.
      *
-     * @throws RuntimeException When the client cannot retrieve the current server version
-     *
      * @return string
+     * @throws RuntimeException When the client cannot retrieve the current server version
      */
     protected function getRedisServerVersion(): string
     {
@@ -287,8 +349,13 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
             return $this->redisServerVersion;
         }
 
-        $client = $this->createClient(null, null, true);
-        $info = array_change_key_case($client->info());
+        if (isset($this->info)) {
+            $info = $this->info;
+        } else {
+            $client = $this->createClient(null, null, true);
+            $info = array_change_key_case($client->info());
+            $this->info = $info;
+        }
 
         if (isset($info['server']['redis_version'])) {
             // Redis >= 2.6
@@ -297,6 +364,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
             // Redis < 2.6
             $version = $info['redis_version'];
         } else {
+            $client = $this->createClient(null, null, true);
             $connection = $client->getConnection();
             throw new RuntimeException("Unable to retrieve a valid server info payload from $connection");
         }
@@ -321,9 +389,9 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
             $this->getName(false)
         );
 
-        if (isset($annotations['method']['requiresRedisVersion'], $annotations['method']['group']) &&
-            !empty($annotations['method']['requiresRedisVersion']) &&
-            in_array('connected', $annotations['method']['group'])
+        if (isset($annotations['method']['requiresRedisVersion'], $annotations['method']['group'])
+            && !empty($annotations['method']['requiresRedisVersion'])
+            && in_array('connected', $annotations['method']['group'])
         ) {
             return $annotations['method']['requiresRedisVersion'][0];
         }
@@ -343,9 +411,9 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     public function isRedisServerVersion(string $operator, string $version): bool
     {
         $serverVersion = $this->getRedisServerVersion();
-        $comparation = version_compare($serverVersion, $version);
+        $comparison = version_compare($serverVersion, $version);
 
-        return (bool) eval("return $comparation $operator 0;");
+        return (bool) eval("return $comparison $operator 0;");
     }
 
     /**
@@ -355,7 +423,7 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
      * decorates test methods while the version of the Redis server used to run
      * integration tests is retrieved directly from the server by using `INFO`.
      *
-     * @throws \PHPUnit\Framework\SkippedTestError When the required Redis server version is not met
+     * @throws PHPUnit\Framework\SkippedTestError When the required Redis server version is not met
      */
     protected function checkRequiredRedisServerVersion(): void
     {
@@ -383,6 +451,110 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Ensures the current Redis JSON module matches version requirements for tests.
+     *
+     * @param  string $module
+     * @return void
+     */
+    protected function checkRequiredRedisModuleVersion(string $module): void
+    {
+        if (null === $requiredVersion = $this->getRequiredModuleVersion($module)) {
+            return;
+        }
+
+        if (version_compare($this->getRedisServerVersion(), '6.0.0', '<')) {
+            $this->markTestSkipped(
+                'Test skipped because Redis JSON module available since Redis 6.x'
+            );
+        }
+
+        $requiredVersion = explode(' ', $requiredVersion, 2);
+
+        if (count($requiredVersion) === 1) {
+            $reqVersion = $requiredVersion[0];
+        } else {
+            $reqVersion = $requiredVersion[1];
+        }
+
+        if (!$this->isSatisfiedRedisModuleVersion($reqVersion, $module)) {
+            $redisModuleVersion = $this->getRedisModuleVersion($module);
+            $module = strtoupper($module);
+
+            $this->markTestSkipped(
+                "Test requires a Redis $module module >= $reqVersion but target module is $redisModuleVersion"
+            );
+        }
+    }
+
+    /**
+     * @param  string $versionToCheck
+     * @param  string $module
+     * @return bool
+     */
+    protected function isSatisfiedRedisModuleVersion(string $versionToCheck, string $module): bool
+    {
+        $currentVersion = $this->getRedisModuleVersion($this->modulesMapping[$module]['name']);
+        $versionToCheck = str_replace('.', '', $versionToCheck);
+
+        return $currentVersion >= (int) $versionToCheck;
+    }
+
+    /**
+     * Returns version of Redis JSON module if it's available.
+     *
+     * @param  string $module
+     * @return string
+     */
+    protected function getRedisModuleVersion(string $module): string
+    {
+        if (isset($this->info)) {
+            $info = $this->info;
+        } else {
+            $client = $this->createClient(null, null, true);
+            $info = array_change_key_case($client->info());
+            $this->info = $info;
+        }
+
+        if (isset($info['modules'][$module]['ver'])) {
+            $this->redisJsonVersion = $info['modules'][$module]['ver'];
+
+            return $info['modules'][$module]['ver'];
+        }
+
+        return '0';
+    }
+
+    /**
+     * Returns version of given module for current Redis instance.
+     * Runs if command belong to one of modules and marked with appropriate annotation
+     * Runs on @connected tests.
+     *
+     * @param  string $module
+     * @return string
+     */
+    protected function getRequiredModuleVersion(string $module): ?string
+    {
+        if (!isset($this->modulesMapping[$module])) {
+            throw new InvalidArgumentException('No existing annotation for given module');
+        }
+
+        $moduleAnnotation = $this->modulesMapping[$module]['annotation'];
+        $annotations = TestUtil::parseTestMethodAnnotations(
+            get_class($this),
+            $this->getName(false)
+        );
+
+        if (isset($annotations['method'][$moduleAnnotation], $annotations['method']['group'])
+            && !empty($annotations['method'][$moduleAnnotation])
+            && in_array('connected', $annotations['method']['group'], true)
+        ) {
+            return $annotations['method'][$moduleAnnotation][0];
+        }
+
+        return null;
+    }
+
+    /**
      * Marks current test skipped when test suite is running on CI environments.
      *
      * @param string $message
@@ -392,5 +564,37 @@ abstract class PredisTestCase extends \PHPUnit\Framework\TestCase
         if (getenv('GITHUB_ACTIONS') || getenv('TRAVIS')) {
             $this->markTestSkipped($message);
         }
+    }
+
+    /**
+     * Check annotations if it's matches to cluster test scenario.
+     *
+     * @return bool
+     */
+    protected function isClusterTest(): bool
+    {
+        $annotations = TestUtil::parseTestMethodAnnotations(
+            get_class($this),
+            $this->getName(false)
+        );
+
+        return isset($annotations['method']['requiresRedisVersion'], $annotations['method']['group'])
+            && !empty($annotations['method']['requiresRedisVersion'])
+            && in_array('connected', $annotations['method']['group'], true)
+            && in_array('cluster', $annotations['method']['group'], true);
+    }
+
+    /**
+     * Parse comma-separated cluster endpoints and convert them into tcp strings.
+     *
+     * @return array
+     */
+    protected function prepareClusterEndpoints(): array
+    {
+        $endpoints = explode(',', constant('REDIS_CLUSTER_ENDPOINTS'));
+
+        return array_map(static function (string $elem) {
+            return 'tcp://' . $elem;
+        }, $endpoints);
     }
 }

@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,16 +13,14 @@
 namespace Predis\Connection;
 
 use PHPUnit\Framework\MockObject\MockObject;
+use Predis\Client;
 use Predis\Command\RawCommand;
 use Predis\Response\Error as ErrorResponse;
 
-/**
- *
- */
 class StreamConnectionTest extends PredisConnectionTestCase
 {
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function getConnectionClass(): string
     {
@@ -34,15 +33,15 @@ class StreamConnectionTest extends PredisConnectionTestCase
     public function testThrowsExceptionOnInitializationCommandFailure(): void
     {
         $this->expectException('Predis\Connection\ConnectionException');
-        $this->expectExceptionMessage("`SELECT` failed: ERR invalid DB index [tcp://127.0.0.1:6379]");
+        $this->expectExceptionMessage('`SELECT` failed: ERR invalid DB index [tcp://127.0.0.1:6379]');
 
         $cmdSelect = RawCommand::create('SELECT', '1000');
 
         /** @var NodeConnectionInterface|MockObject */
         $connection = $this
             ->getMockBuilder($this->getConnectionClass())
-            ->onlyMethods(array('executeCommand', 'createResource'))
-            ->setConstructorArgs(array(new Parameters()))
+            ->onlyMethods(['executeCommand', 'createResource'])
+            ->setConstructorArgs([new Parameters()])
             ->getMock();
         $connection
             ->method('executeCommand')
@@ -70,8 +69,8 @@ class StreamConnectionTest extends PredisConnectionTestCase
         /** @var NodeConnectionInterface|MockObject */
         $connection = $this
             ->getMockBuilder($this->getConnectionClass())
-            ->onlyMethods(array('getResource'))
-            ->setConstructorArgs(array(new Parameters()))
+            ->onlyMethods(['getResource'])
+            ->setConstructorArgs([new Parameters()])
             ->getMock();
         $connection
             ->method('getResource')
@@ -90,16 +89,16 @@ class StreamConnectionTest extends PredisConnectionTestCase
      */
     public function testPersistentParameterWithFalseLikeValues(): void
     {
-        $connection1 = $this->createConnectionWithParams(array('persistent' => 0));
+        $connection1 = $this->createConnectionWithParams(['persistent' => 0]);
         $this->assertNonPersistentConnection($connection1);
 
-        $connection2 = $this->createConnectionWithParams(array('persistent' => false));
+        $connection2 = $this->createConnectionWithParams(['persistent' => false]);
         $this->assertNonPersistentConnection($connection2);
 
-        $connection3 = $this->createConnectionWithParams(array('persistent' => '0'));
+        $connection3 = $this->createConnectionWithParams(['persistent' => '0']);
         $this->assertNonPersistentConnection($connection3);
 
-        $connection4 = $this->createConnectionWithParams(array('persistent' => 'false'));
+        $connection4 = $this->createConnectionWithParams(['persistent' => 'false']);
         $this->assertNonPersistentConnection($connection4);
     }
 
@@ -109,16 +108,16 @@ class StreamConnectionTest extends PredisConnectionTestCase
      */
     public function testPersistentParameterWithTrueLikeValues(): void
     {
-        $connection1 = $this->createConnectionWithParams(array('persistent' => 1));
+        $connection1 = $this->createConnectionWithParams(['persistent' => 1]);
         $this->assertPersistentConnection($connection1);
 
-        $connection2 = $this->createConnectionWithParams(array('persistent' => true));
+        $connection2 = $this->createConnectionWithParams(['persistent' => true]);
         $this->assertPersistentConnection($connection2);
 
-        $connection3 = $this->createConnectionWithParams(array('persistent' => '1'));
+        $connection3 = $this->createConnectionWithParams(['persistent' => '1']);
         $this->assertPersistentConnection($connection3);
 
-        $connection4 = $this->createConnectionWithParams(array('persistent' => 'true'));
+        $connection4 = $this->createConnectionWithParams(['persistent' => 'true']);
         $this->assertPersistentConnection($connection4);
 
         $connection1->disconnect();
@@ -130,8 +129,8 @@ class StreamConnectionTest extends PredisConnectionTestCase
      */
     public function testPersistentConnectionsToSameNodeShareResource(): void
     {
-        $connection1 = $this->createConnectionWithParams(array('persistent' => true));
-        $connection2 = $this->createConnectionWithParams(array('persistent' => true));
+        $connection1 = $this->createConnectionWithParams(['persistent' => true]);
+        $connection2 = $this->createConnectionWithParams(['persistent' => true]);
 
         $this->assertPersistentConnection($connection1);
         $this->assertPersistentConnection($connection2);
@@ -147,8 +146,8 @@ class StreamConnectionTest extends PredisConnectionTestCase
      */
     public function testPersistentConnectionsToSameNodeDoNotShareResourceUsingDifferentPersistentID(): void
     {
-        $connection1 = $this->createConnectionWithParams(array('persistent' => 'conn1'));
-        $connection2 = $this->createConnectionWithParams(array('persistent' => 'conn2'));
+        $connection1 = $this->createConnectionWithParams(['persistent' => 'conn1']);
+        $connection2 = $this->createConnectionWithParams(['persistent' => 'conn2']);
 
         $this->assertPersistentConnection($connection1);
         $this->assertPersistentConnection($connection2);
@@ -196,5 +195,23 @@ class StreamConnectionTest extends PredisConnectionTestCase
         $this->assertArrayHasKey('socket', $options);
         $this->assertArrayHasKey('tcp_nodelay', $options['socket']);
         $this->assertFalse($options['socket']['tcp_nodelay']);
+    }
+
+    /**
+     * @group connected
+     * @requiresRedisVersion < 7.0.0
+     */
+    public function testConnectDoNotThrowsExceptionOnClientCommandError(): void
+    {
+        $connection = $this->createConnectionWithParams([]);
+        $connection->addConnectCommand(
+            new RawCommand('CLIENT', ['SETINFO', 'LIB-NAME', 'predis'])
+        );
+        $connection->addConnectCommand(
+            new RawCommand('CLIENT', ['SETINFO', 'LIB-VER', Client::VERSION])
+        );
+
+        $connection->connect();
+        $this->assertTrue(true);
     }
 }

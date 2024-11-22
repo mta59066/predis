@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -17,7 +18,6 @@ namespace Predis\Command\Redis;
  */
 class ZPOPMAX_Test extends PredisCommandTestCase
 {
-
     /**
      * {@inheritdoc}
      */
@@ -41,8 +41,8 @@ class ZPOPMAX_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('zset', 2);
-        $expected = array('zset', 2);
+        $arguments = ['zset', 2];
+        $expected = ['zset', 2];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -57,8 +57,8 @@ class ZPOPMAX_Test extends PredisCommandTestCase
      */
     public function testParseResponse(): void
     {
-        $raw = array('element1', '1', 'element2', '2', 'element3', '3');
-        $expected = array('element1' => '1', 'element2' => '2', 'element3' => '3');
+        $raw = ['element1', '1', 'element2', '2', 'element3', '3'];
+        $expected = ['element1' => '1', 'element2' => '2', 'element3' => '3'];
 
         $command = $this->getCommand();
 
@@ -66,22 +66,21 @@ class ZPOPMAX_Test extends PredisCommandTestCase
     }
 
     /**
-     * @requiresRedisVersion >= 5.0.0
-     *
      * @group connected
+     * @requiresRedisVersion >= 5.0.0
      */
     public function testReturnsElements(): void
     {
         $redis = $this->getClient();
 
-        $this->assertSame(array(), $redis->zpopmax('letters'));
-        $this->assertSame(array(), $redis->zpopmax('letters', 3));
+        $this->assertSame([], $redis->zpopmax('letters'));
+        $this->assertSame([], $redis->zpopmax('letters', 3));
 
         $redis->zadd('letters', -10, 'a', 0, 'b', 10, 'c', 20, 'd', 20, 'e', 30, 'f');
 
-        $this->assertSame(array('f' => '30'), $redis->zpopmax('letters'));
-        $this->assertSame(array('e' => '20', 'd' => '20', 'c' => '10'), $redis->zpopmax('letters', 3));
-        $this->assertSame(array('b' => '0', 'a' => '-10'), $redis->zpopmax('letters', 3));
+        $this->assertEquals(['f' => '30'], $redis->zpopmax('letters'));
+        $this->assertEquals(['e' => '20', 'd' => '20', 'c' => '10'], $redis->zpopmax('letters', 3));
+        $this->assertEquals(['b' => '0', 'a' => '-10'], $redis->zpopmax('letters', 3));
     }
 
     /**

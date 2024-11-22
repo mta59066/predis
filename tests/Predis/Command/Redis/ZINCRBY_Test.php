@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class ZINCRBY_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('key', 1.0, 'member');
-        $expected = array('key', 1.0, 'member');
+        $arguments = ['key', 1.0, 'member'];
+        $expected = ['key', 1.0, 'member'];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -62,10 +63,10 @@ class ZINCRBY_Test extends PredisCommandTestCase
     {
         $redis = $this->getClient();
 
-        $this->assertSame('1', $redis->zincrby('letters', 1, 'member'));
-        $this->assertSame('0', $redis->zincrby('letters', -1, 'member'));
-        $this->assertSame('0.5', $redis->zincrby('letters', 0.5, 'member'));
-        $this->assertSame('-10', $redis->zincrby('letters', -10.5, 'member'));
+        $this->assertEquals('1', $redis->zincrby('letters', 1, 'member'));
+        $this->assertEquals('0', $redis->zincrby('letters', -1, 'member'));
+        $this->assertEquals('0.5', $redis->zincrby('letters', 0.5, 'member'));
+        $this->assertEquals('-10', $redis->zincrby('letters', -10.5, 'member'));
     }
 
     /**

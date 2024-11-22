@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -15,9 +16,6 @@ use Predis\Command\Processor\ProcessorChain;
 use Predis\Command\Processor\ProcessorInterface;
 use PredisTestCase;
 
-/**
- *
- */
 class RedisFactoryTest extends PredisTestCase
 {
     /**
@@ -152,7 +150,7 @@ class RedisFactoryTest extends PredisTestCase
 
         $this->assertInstanceOf('Predis\Command\CommandInterface', $command);
         $this->assertEquals('INFO', $command->getId());
-        $this->assertEquals(array(), $command->getArguments());
+        $this->assertEquals([], $command->getArguments());
     }
 
     /**
@@ -162,7 +160,7 @@ class RedisFactoryTest extends PredisTestCase
     {
         $factory = new RedisFactory();
 
-        $arguments = array('foo', 'bar');
+        $arguments = ['foo', 'bar'];
         $command = $factory->create('set', $arguments);
 
         $this->assertInstanceOf('Predis\Command\CommandInterface', $command);
@@ -176,7 +174,7 @@ class RedisFactoryTest extends PredisTestCase
     public function testCreateUndefinedCommand(): void
     {
         $this->expectException('Predis\ClientException');
-        $this->expectExceptionMessage("Command `UNKNOWN` is not a registered Redis command.");
+        $this->expectExceptionMessage('Command `UNKNOWN` is not a registered Redis command.');
 
         $factory = new RedisFactory();
 
@@ -253,9 +251,9 @@ class RedisFactoryTest extends PredisTestCase
 
         $factory = new RedisFactory();
         $factory->setProcessor($processor);
-        $factory->create('set', array('foo', 'bar'));
+        $factory->create('set', ['foo', 'bar']);
 
-        $this->assertSame(array('FOO', 'BAR'), $argsRef);
+        $this->assertSame(['FOO', 'BAR'], $argsRef);
     }
 
     /**
@@ -292,7 +290,7 @@ class RedisFactoryTest extends PredisTestCase
      */
     protected function getExpectedCommands(): array
     {
-        return array(
+        return [
             0 => 'EXISTS',
             1 => 'DEL',
             2 => 'TYPE',
@@ -452,6 +450,95 @@ class RedisFactoryTest extends PredisTestCase
             156 => 'GEODIST',
             157 => 'GEORADIUS',
             158 => 'GEORADIUSBYMEMBER',
-        );
+            159 => 'JSONSET',
+            160 => 'JSONGET',
+            161 => 'JSONARRAPPEND',
+            162 => 'JSONARRINDEX',
+            163 => 'JSONARRINSERT',
+            164 => 'JSONARRLEN',
+            165 => 'JSONARRPOP',
+            166 => 'JSONARRTRIM',
+            167 => 'JSONCLEAR',
+            168 => 'JSONDEBUG',
+            169 => 'JSONDEL',
+            170 => 'JSONFORGET',
+            171 => 'JSONMGET',
+            172 => 'JSONNUMINCRBY',
+            173 => 'JSONOBJKEYS',
+            174 => 'JSONOBJLEN',
+            175 => 'JSONRESP',
+            176 => 'JSONSTRAPPEND',
+            177 => 'JSONSTRLEN',
+            178 => 'JSONTOGGLE',
+            179 => 'JSONTYPE',
+            180 => 'BFADD',
+            181 => 'BFEXISTS',
+            182 => 'BFINFO',
+            183 => 'BFINSERT',
+            184 => 'BFLOADCHUNK',
+            185 => 'BFMADD',
+            186 => 'BFMEXISTS',
+            187 => 'BFRESERVE',
+            188 => 'BFSCANDUMP',
+            189 => 'CMSINCRBY',
+            190 => 'CMSINFO',
+            191 => 'CMSINITBYDIM',
+            192 => 'CMSINITBYPROB',
+            193 => 'CMSMERGE',
+            194 => 'CMSQUERY',
+            195 => 'CFADD',
+            196 => 'CFADDNX',
+            197 => 'CFCOUNT',
+            198 => 'CFDEL',
+            199 => 'CFEXISTS',
+            200 => 'CFINFO',
+            201 => 'CFINSERT',
+            202 => 'CFINSERTNX',
+            203 => 'CFLOADCHUNK',
+            204 => 'CFMEXISTS',
+            205 => 'CFRESERVE',
+            206 => 'CFSCANDUMP',
+            207 => 'TDIGESTADD',
+            208 => 'TDIGESTBYRANK',
+            209 => 'TDIGESTBYREVRANK',
+            210 => 'TDIGESTCDF',
+            211 => 'TDIGESTCREATE',
+            212 => 'TDIGESTINFO',
+            213 => 'TDIGESTMAX',
+            214 => 'TDIGESTMERGE',
+            215 => 'TDIGESTMIN',
+            216 => 'TDIGESTQUANTILE',
+            217 => 'TDIGESTRANK',
+            218 => 'TDIGESTRESET',
+            219 => 'TDIGESTREVRANK',
+            220 => 'TDIGESTTRIMMED_MEAN',
+            221 => 'TOPKADD',
+            222 => 'TOPKINCRBY',
+            223 => 'TOPKINFO',
+            224 => 'TOPKLIST',
+            225 => 'TOPKQUERY',
+            226 => 'TOPKRESERVE',
+            227 => 'FTALIASADD',
+            228 => 'FTALIASDEL',
+            229 => 'FTALIASUPDATE',
+            230 => 'FTALTER',
+            231 => 'FTCONFIG',
+            232 => 'FTCREATE',
+            233 => 'FTDICTADD',
+            234 => 'FTDICTDEL',
+            235 => 'FTDICTDUMP',
+            236 => 'FTDROPINDEX',
+            237 => 'FTINFO',
+            238 => 'FTPROFILE',
+            239 => 'FTSEARCH',
+            240 => 'FTSPELLCHECK',
+            241 => 'FTSUGADD',
+            242 => 'FTSUGDEL',
+            243 => 'FTSUGGET',
+            244 => 'FTSUGLEN',
+            245 => 'FTSYNDUMP',
+            246 => 'FTSYNUPDATE',
+            247 => 'FTTAGVALS',
+        ];
     }
 }

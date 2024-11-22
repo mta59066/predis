@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,13 +12,12 @@
 
 namespace Predis\Connection;
 
+use Predis\Client;
+use Predis\Command\RawCommand;
 use PredisTestCase;
-use PHPUnit\Framework\MockObject\MockObject;
-use Predis\Connection\Cluster\ClusterInterface;
+use ReflectionObject;
+use stdClass;
 
-/**
- *
- */
 class FactoryTest extends PredisTestCase
 {
     /**
@@ -37,15 +37,15 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $factory->setDefaultParameters($defaults = array(
+        $factory->setDefaultParameters($defaults = [
             'password' => 'secret',
             'database' => 10,
             'custom' => 'foobar',
-        ));
+        ]);
 
         $this->assertSame($defaults, $factory->getDefaultParameters());
 
-        $parameters = array('database' => 10, 'persistent' => true);
+        $parameters = ['database' => 10, 'persistent' => true];
     }
 
     /**
@@ -55,13 +55,13 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $parameters = new Parameters(array('scheme' => 'tcp'));
+        $parameters = new Parameters(['scheme' => 'tcp']);
         $connection = $factory->create($parameters);
 
         $this->assertInstanceOf('Predis\Connection\StreamConnection', $connection);
         $this->assertSame($parameters, $connection->getParameters());
 
-        $parameters = new Parameters(array('scheme' => 'redis'));
+        $parameters = new Parameters(['scheme' => 'redis']);
         $connection = $factory->create($parameters);
 
         $this->assertInstanceOf('Predis\Connection\StreamConnection', $connection);
@@ -75,13 +75,13 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $parameters = new Parameters(array('scheme' => 'tls'));
+        $parameters = new Parameters(['scheme' => 'tls']);
         $connection = $factory->create($parameters);
 
         $this->assertInstanceOf('Predis\Connection\StreamConnection', $connection);
         $this->assertSame($parameters, $connection->getParameters());
 
-        $parameters = new Parameters(array('scheme' => 'rediss'));
+        $parameters = new Parameters(['scheme' => 'rediss']);
         $connection = $factory->create($parameters);
 
         $this->assertInstanceOf('Predis\Connection\StreamConnection', $connection);
@@ -95,7 +95,7 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $parameters = new Parameters(array('scheme' => 'unix', 'path' => '/tmp/redis.sock'));
+        $parameters = new Parameters(['scheme' => 'unix', 'path' => '/tmp/redis.sock']);
         $connection = $factory->create($parameters);
 
         $this->assertInstanceOf('Predis\Connection\StreamConnection', $connection);
@@ -109,17 +109,17 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $factory->setDefaultParameters($defaultParams = array(
+        $factory->setDefaultParameters($defaultParams = [
             'port' => 7000,
             'password' => 'secret',
             'database' => 10,
             'custom' => 'foobar',
-        ));
+        ]);
 
-        $inputParams = new Parameters(array(
+        $inputParams = new Parameters([
             'host' => 'localhost',
             'database' => 5,
-        ));
+        ]);
 
         $connection = $factory->create($inputParams);
         $parameters = $connection->getParameters();
@@ -158,11 +158,11 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $factory->setDefaultParameters($defaultParams = array(
+        $factory->setDefaultParameters($defaultParams = [
             'port' => 7000,
             'password' => 'secret',
             'custom' => 'foobar',
-        ));
+        ]);
 
         $connection = $factory->create(null);
         $parameters = $connection->getParameters();
@@ -182,7 +182,7 @@ class FactoryTest extends PredisTestCase
     public function testCreateConnectionWithArrayParameters(): void
     {
         $factory = new Factory();
-        $connection = $factory->create(array('scheme' => 'tcp', 'custom' => 'foobar'));
+        $connection = $factory->create(['scheme' => 'tcp', 'custom' => 'foobar']);
         $parameters = $connection->getParameters();
 
         $this->assertInstanceOf('Predis\Connection\NodeConnectionInterface', $connection);
@@ -199,17 +199,17 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $factory->setDefaultParameters($defaultParams = array(
+        $factory->setDefaultParameters($defaultParams = [
             'port' => 7000,
             'password' => 'secret',
             'custom' => 'foobar',
-        ));
+        ]);
 
-        $connection = $factory->create($inputParams = array(
+        $connection = $factory->create($inputParams = [
             'host' => 'localhost',
             'port' => 8000,
             'persistent' => true,
-        ));
+        ]);
 
         $parameters = $connection->getParameters();
 
@@ -246,11 +246,11 @@ class FactoryTest extends PredisTestCase
     {
         $factory = new Factory();
 
-        $factory->setDefaultParameters($defaultParams = array(
+        $factory->setDefaultParameters($defaultParams = [
             'port' => 7000,
             'password' => 'secret',
             'custom' => 'foobar',
-        ));
+        ]);
 
         $connection = $factory->create('tcp://localhost:8000?persistent=1');
         $parameters = $connection->getParameters();
@@ -275,7 +275,7 @@ class FactoryTest extends PredisTestCase
             ->expects($this->never())
             ->method('addConnectCommand');
 
-        $parameters = new Parameters(array('scheme' => 'test'));
+        $parameters = new Parameters(['scheme' => 'test']);
 
         $factory = new Factory();
         $factory->define('test', function ($_parameters, $_factory) use ($connection, $parameters, $factory) {
@@ -293,10 +293,10 @@ class FactoryTest extends PredisTestCase
      */
     public function testCreateConnectionWithInitializationCommands(): void
     {
-        $parameters = new Parameters(array(
+        $parameters = new Parameters([
             'database' => '0',
             'password' => 'foobar',
-        ));
+        ]);
 
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
         $connection
@@ -307,14 +307,14 @@ class FactoryTest extends PredisTestCase
             ->expects($this->exactly(2))
             ->method('addConnectCommand')
             ->withConsecutive(
-                array($this->isRedisCommand('AUTH', array('foobar'))),
-                array($this->isRedisCommand('SELECT', array('0')))
+                [$this->isRedisCommand('AUTH', ['foobar'])],
+                [$this->isRedisCommand('SELECT', ['0'])]
             );
 
         $factory = new Factory();
 
         // TODO: using reflection to make a protected method accessible :facepalm:
-        $reflection = new \ReflectionObject($factory);
+        $reflection = new ReflectionObject($factory);
         $prepareConnection = $reflection->getMethod('prepareConnection');
         $prepareConnection->setAccessible(true);
         $prepareConnection->invoke($factory, $connection);
@@ -325,22 +325,22 @@ class FactoryTest extends PredisTestCase
      */
     public function testCreateConnectionWithPasswordAndNoUsernameAddsInitializationCommandAuthWithOneArgument()
     {
-        $parameters = new Parameters(array(
+        $parameters = new Parameters([
             'password' => 'foobar',
-        ));
+        ]);
 
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
         $connection->expects($this->once())
             ->method('getParameters')
             ->will($this->returnValue($parameters));
-        $connection->expects($this->once(1))
+        $connection->expects($this->once())
             ->method('addConnectCommand')
-            ->with($this->isRedisCommand('AUTH', array('foobar')));
+            ->with($this->isRedisCommand('AUTH', ['foobar']));
 
         $factory = new Factory();
 
         // TODO: using reflection to make a protected method accessible :facepalm:
-        $reflection = new \ReflectionObject($factory);
+        $reflection = new ReflectionObject($factory);
         $prepareConnection = $reflection->getMethod('prepareConnection');
         $prepareConnection->setAccessible(true);
         $prepareConnection->invoke($factory, $connection);
@@ -351,23 +351,23 @@ class FactoryTest extends PredisTestCase
      */
     public function testCreateConnectionWithPasswordAndUsernameAddsInitializationCommandAuthWithTwoArguments()
     {
-        $parameters = new Parameters(array(
+        $parameters = new Parameters([
             'username' => 'myusername',
             'password' => 'foobar',
-        ));
+        ]);
 
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
         $connection->expects($this->once())
             ->method('getParameters')
             ->will($this->returnValue($parameters));
-        $connection->expects($this->once(1))
+        $connection->expects($this->once())
             ->method('addConnectCommand')
-            ->with($this->isRedisCommand('AUTH', array('myusername', 'foobar')));
+            ->with($this->isRedisCommand('AUTH', ['myusername', 'foobar']));
 
         $factory = new Factory();
 
         // TODO: using reflection to make a protected method accessible :facepalm:
-        $reflection = new \ReflectionObject($factory);
+        $reflection = new ReflectionObject($factory);
         $prepareConnection = $reflection->getMethod('prepareConnection');
         $prepareConnection->setAccessible(true);
         $prepareConnection->invoke($factory, $connection);
@@ -378,9 +378,9 @@ class FactoryTest extends PredisTestCase
      */
     public function testCreateConnectionWithUsernameAndNoPasswordDoesNotAddInitializationCommands()
     {
-        $parameters = new Parameters(array(
+        $parameters = new Parameters([
             'username' => 'myusername',
-        ));
+        ]);
 
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
         $connection->expects($this->once())
@@ -392,7 +392,7 @@ class FactoryTest extends PredisTestCase
         $factory = new Factory();
 
         // TODO: using reflection to make a protected method accessible :facepalm:
-        $reflection = new \ReflectionObject($factory);
+        $reflection = new ReflectionObject($factory);
         $prepareConnection = $reflection->getMethod('prepareConnection');
         $prepareConnection->setAccessible(true);
         $prepareConnection->invoke($factory, $connection);
@@ -404,9 +404,9 @@ class FactoryTest extends PredisTestCase
      */
     public function testCreateConnectionWithEmptyParametersDoesNotAddInitializationCommands($parameter, $value)
     {
-        $parameters = new Parameters(array(
+        $parameters = new Parameters([
             $parameter => $value,
-        ));
+        ]);
 
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
         $connection->expects($this->once())
@@ -418,7 +418,7 @@ class FactoryTest extends PredisTestCase
         $factory = new Factory();
 
         // TODO: using reflection to make a protected method accessible :facepalm:
-        $reflection = new \ReflectionObject($factory);
+        $reflection = new ReflectionObject($factory);
         $prepareConnection = $reflection->getMethod('prepareConnection');
         $prepareConnection->setAccessible(true);
         $prepareConnection->invoke($factory, $connection);
@@ -433,7 +433,7 @@ class FactoryTest extends PredisTestCase
         $this->expectExceptionMessage("Unknown connection scheme: 'unknown'");
 
         $factory = new Factory();
-        $factory->create(new Parameters(array('scheme' => 'unknown')));
+        $factory->create(new Parameters(['scheme' => 'unknown']));
     }
 
     /**
@@ -441,9 +441,9 @@ class FactoryTest extends PredisTestCase
      */
     public function testDefineConnectionWithFQN(): void
     {
-        list(, $connectionClass) = $this->getMockConnectionClass();
+        [, $connectionClass] = $this->getMockConnectionClass();
 
-        $parameters = new Parameters(array('scheme' => 'foobar'));
+        $parameters = new Parameters(['scheme' => 'foobar']);
         $factory = new Factory();
 
         $factory->define($parameters->scheme, $connectionClass);
@@ -457,9 +457,9 @@ class FactoryTest extends PredisTestCase
      */
     public function testDefineConnectionWithCallable(): void
     {
-        list(, $connectionClass) = $this->getMockConnectionClass();
+        [, $connectionClass] = $this->getMockConnectionClass();
 
-        $parameters = new Parameters(array('scheme' => 'foobar'));
+        $parameters = new Parameters(['scheme' => 'foobar']);
         $factory = new Factory();
 
         $initializer = function ($parameters) use ($connectionClass) {
@@ -467,7 +467,7 @@ class FactoryTest extends PredisTestCase
         };
 
         $initializerMock = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $initializerMock
             ->expects($this->exactly(2))
@@ -493,7 +493,7 @@ class FactoryTest extends PredisTestCase
         $this->expectException('InvalidArgumentException');
 
         $factory = new Factory();
-        $factory->define('foobar', new \stdClass());
+        $factory->define('foobar', new stdClass());
     }
 
     /**
@@ -529,7 +529,7 @@ class FactoryTest extends PredisTestCase
         $this->expectException('InvalidArgumentException');
         $this->expectExceptionMessage("Unknown connection scheme: 'test'");
 
-        list(, $connectionClass) = $this->getMockConnectionClass();
+        [, $connectionClass] = $this->getMockConnectionClass();
 
         $factory = new Factory();
 
@@ -538,6 +538,27 @@ class FactoryTest extends PredisTestCase
 
         $factory->undefine('test');
         $factory->create('test://127.0.0.1');
+    }
+
+    /**
+     * @group disconnected
+     * @return void
+     */
+    public function testSetClientNameAndVersionOnConnection(): void
+    {
+        $parameters = ['client_info' => true];
+
+        $factory = new Factory();
+        $connection = $factory->create($parameters);
+        $initCommands = $connection->getInitCommands();
+
+        $this->assertInstanceOf(RawCommand::class, $initCommands[0]);
+        $this->assertSame('CLIENT', $initCommands[0]->getId());
+        $this->assertSame(['SETINFO', 'LIB-NAME', 'predis'], $initCommands[0]->getArguments());
+
+        $this->assertInstanceOf(RawCommand::class, $initCommands[1]);
+        $this->assertSame('CLIENT', $initCommands[1]->getId());
+        $this->assertSame(['SETINFO', 'LIB-VER', Client::VERSION], $initCommands[1]->getArguments());
     }
 
     // ******************************************************************** //
@@ -553,13 +574,13 @@ class FactoryTest extends PredisTestCase
     {
         $connection = $this->getMockBuilder('Predis\Connection\NodeConnectionInterface')->getMock();
 
-        return array($connection, get_class($connection));
+        return [$connection, get_class($connection)];
     }
 
     /**
      * Provides empty values for specific parameters.
      *
-     * These parameters usually trigger the addition of initializatin commands
+     * These parameters usually trigger the addition of initialization commands
      * to connection instances like `password` => AUTH and `database` => SELECT,
      * but they should not be added when their values are NULL or empty strings.
      *
@@ -567,16 +588,16 @@ class FactoryTest extends PredisTestCase
      */
     public function provideEmptyParametersForInitializationCommands()
     {
-        return array(
+        return [
             // AUTH
-            array('username', ''),
-            array('username', null),
-            array('password', ''),
-            array('password', null),
+            ['username', ''],
+            ['username', null],
+            ['password', ''],
+            ['password', null],
 
             // SELECT
-            array('database', ''),
-            array('database', null),
-        );
+            ['database', ''],
+            ['database', null],
+        ];
     }
 }

@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,20 +12,17 @@
 
 namespace Predis\Command\Redis;
 
-use PredisTestCase;
 use Predis\Client;
 use Predis\Command;
 use Predis\Command\CommandInterface;
+use PredisTestCase;
 
-/**
- *
- */
 abstract class PredisCommandTestCase extends PredisTestCase
 {
     /**
      * Returns the expected command for tests.
      *
-     * @return Command\CommandInterface|string Instance or FQCN of the expected command
+     * @return CommandInterface|string Instance or FQCN of the expected command
      */
     abstract protected function getExpectedCommand(): string;
 
@@ -38,20 +36,19 @@ abstract class PredisCommandTestCase extends PredisTestCase
     /**
      * Returns a new command instance.
      *
-     * @return Command\CommandInterface
+     * @return CommandInterface
      */
-    public function getCommand(): Command\CommandInterface
+    public function getCommand(): CommandInterface
     {
         $command = $this->getExpectedCommand();
 
-        return $command instanceof Command\CommandInterface ? $command : new $command();
+        return $command instanceof CommandInterface ? $command : new $command();
     }
 
     /**
      * Returns a new client instance.
      *
-     * @param bool $flushdb Flush selected database before returning the client
-     *
+     * @param  bool   $flushdb Flush selected database before returning the client
      * @return Client
      */
     public function getClient(bool $flushdb = true): Client
@@ -64,7 +61,11 @@ abstract class PredisCommandTestCase extends PredisTestCase
             );
         }
 
-        $client = $this->createClient(null, null, $flushdb);
+        if ($this->isClusterTest()) {
+            $client = $this->createClient(null, ['cluster' => 'redis'], $flushdb);
+        } else {
+            $client = $this->createClient(null, null, $flushdb);
+        }
 
         return $client;
     }
@@ -82,7 +83,7 @@ abstract class PredisCommandTestCase extends PredisTestCase
     /**
      * Returns a new command instance with the specified arguments.
      *
-     * @param ... List of arguments for the command
+     * @param mixed ...$arguments List of arguments for the command
      *
      * @return CommandInterface
      */
@@ -112,9 +113,10 @@ abstract class PredisCommandTestCase extends PredisTestCase
     public function testCommandId(): void
     {
         $command = $this->getCommand();
+        $sanitizedCommandId = str_replace('.', '', $command->getId());
 
         $this->assertInstanceOf('Predis\Command\CommandInterface', $command);
-        $this->assertEquals($this->getExpectedId(), $command->getId());
+        $this->assertEquals($this->getExpectedId(), $sanitizedCommandId);
     }
 
     /**
@@ -122,7 +124,7 @@ abstract class PredisCommandTestCase extends PredisTestCase
      */
     public function testRawArguments(): void
     {
-        $expected = array('1st', '2nd', '3rd', '4th');
+        $expected = ['1st', '2nd', '3rd', '4th'];
 
         $command = $this->getCommand();
         $command->setRawArguments($expected);

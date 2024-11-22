@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,12 +12,9 @@
 
 namespace Predis\Cluster;
 
-use PredisTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use PredisTestCase;
 
-/**
- *
- */
 class PredisStrategyTest extends PredisTestCase
 {
     /**
@@ -35,9 +33,9 @@ class PredisStrategyTest extends PredisTestCase
         $this->assertSame($expected, $strategy->getSlotByKey('bar:{foo}:{baz}'));
 
         $this->assertSame($expected, $strategy->getSlotByKey('bar:{foo}:baz{}'));
-        $this->assertSame(PHP_INT_SIZE == 4 ? -1355751440 : 2939215856,  $strategy->getSlotByKey('{}bar:{foo}:baz'));
+        $this->assertSame(PHP_INT_SIZE == 4 ? -1355751440 : 2939215856, $strategy->getSlotByKey('{}bar:{foo}:baz'));
 
-        $this->assertSame(PHP_INT_SIZE == 4 ?   -18873278 : 4276094018, $strategy->getSlotByKey(''));
+        $this->assertSame(PHP_INT_SIZE == 4 ? -18873278 : 4276094018, $strategy->getSlotByKey(''));
         $this->assertSame(PHP_INT_SIZE == 4 ? -1574052038 : 2720915258, $strategy->getSlotByKey('{}'));
     }
 
@@ -70,7 +68,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key');
+        $arguments = ['key'];
 
         foreach ($this->getExpectedCommands('keys-first') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -85,7 +83,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:1', '{key}:2', '{key}:3', '{key}:4');
+        $arguments = ['{key}:1', '{key}:2', '{key}:3', '{key}:4'];
 
         foreach ($this->getExpectedCommands('keys-all') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -100,9 +98,24 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:1', 'value1', '{key}:2', 'value2');
+        $arguments = ['{key}:1', 'value1', '{key}:2', 'value2'];
 
         foreach ($this->getExpectedCommands('keys-interleaved') as $commandID) {
+            $command = $commands->create($commandID, $arguments);
+            $this->assertNotNull($strategy->getSlot($command), $commandID);
+        }
+    }
+
+    /**
+     * @group disconnected
+     */
+    public function testFakeKeyCommandsWithOneKey(): void
+    {
+        $strategy = $this->getClusterStrategy();
+        $commands = $this->getCommandFactory();
+        $arguments = [];
+
+        foreach ($this->getExpectedCommands('keys-fake') as $commandID) {
             $command = $commands->create($commandID, $arguments);
             $this->assertNotNull($strategy->getSlot($command), $commandID);
         }
@@ -115,14 +128,14 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:1', 'value1', '{key}:2', 'value2');
+        $arguments = ['{key}:1', 'value1', '{key}:2', 'value2'];
 
         $commandID = 'SORT';
 
-        $command = $commands->create($commandID, array('{key}:1'));
+        $command = $commands->create($commandID, ['{key}:1']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', array('STORE' => '{key}:2')));
+        $command = $commands->create($commandID, ['{key}:1', ['STORE' => '{key}:2']]);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -133,7 +146,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:1', '{key}:2', 10);
+        $arguments = ['{key}:1', '{key}:2', 10];
 
         foreach ($this->getExpectedCommands('keys-blockinglist') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -148,7 +161,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:destination', 2, '{key}:1', '{key}:1', array('aggregate' => 'SUM'));
+        $arguments = ['{key}:destination', ['{key}:1', '{key}:1'], [], 'sum'];
 
         foreach ($this->getExpectedCommands('keys-zaggregated') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -163,7 +176,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('AND', '{key}:destination', '{key}:src:1', '{key}:src:2');
+        $arguments = ['AND', '{key}:destination', '{key}:src:1', '{key}:src:2'];
 
         foreach ($this->getExpectedCommands('keys-bitop') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -180,10 +193,10 @@ class PredisStrategyTest extends PredisTestCase
         $commands = $this->getCommandFactory();
         $commandID = 'GEORADIUS';
 
-        $command = $commands->create($commandID, array('{key}:1', 10, 10, 1, 'km'));
+        $command = $commands->create($commandID, ['{key}:1', 10, 10, 1, 'km']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', 10, 10, 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3'));
+        $command = $commands->create($commandID, ['{key}:1', 10, 10, 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -196,10 +209,10 @@ class PredisStrategyTest extends PredisTestCase
         $commands = $this->getCommandFactory();
         $commandID = 'GEORADIUSBYMEMBER';
 
-        $command = $commands->create($commandID, array('{key}:1', 'member', 1, 'km'));
+        $command = $commands->create($commandID, ['{key}:1', 'member', 1, 'km']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', 'member', 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3'));
+        $command = $commands->create($commandID, ['{key}:1', 'member', 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -210,7 +223,7 @@ class PredisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('%SCRIPT%', 2, '{key}:1', '{key}:2', 'value1', 'value2');
+        $arguments = ['%SCRIPT%', 2, '{key}:1', '{key}:2', 'value1', 'value2'];
 
         foreach ($this->getExpectedCommands('keys-script') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -224,11 +237,11 @@ class PredisStrategyTest extends PredisTestCase
     public function testKeysForScriptCommand(): void
     {
         $strategy = $this->getClusterStrategy();
-        $arguments = array('{key}:1', '{key}:2', 'value1', 'value2');
+        $arguments = ['{key}:1', '{key}:2', 'value1', 'value2'];
 
         /** @var \Predis\Command\CommandInterface|MockObject */
         $command = $this->getMockBuilder('Predis\Command\ScriptCommand')
-            ->onlyMethods(array('getScript', 'getKeysCount'))
+            ->onlyMethods(['getScript', 'getKeysCount'])
             ->getMock();
         $command
             ->expects($this->once())
@@ -255,10 +268,10 @@ class PredisStrategyTest extends PredisTestCase
 
         $commands = $this->getCommandFactory();
 
-        $command = $commands->create('set', array('key', 'value'));
+        $command = $commands->create('set', ['key', 'value']);
         $this->assertNull($strategy->getSlot($command));
 
-        $command = $commands->create('get', array('key'));
+        $command = $commands->create('get', ['key']);
         $this->assertNull($strategy->getSlot($command));
     }
 
@@ -268,7 +281,7 @@ class PredisStrategyTest extends PredisTestCase
     public function testSettingCustomCommandHandler(): void
     {
         $callable = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $callable
             ->expects($this->once())
@@ -281,7 +294,7 @@ class PredisStrategyTest extends PredisTestCase
         $strategy->setCommandHandler('get', $callable);
 
         $commands = $this->getCommandFactory();
-        $command = $commands->create('get', array('key'));
+        $command = $commands->create('get', ['key']);
 
         $this->assertNotNull($strategy->getSlot($command));
     }
@@ -314,7 +327,7 @@ class PredisStrategyTest extends PredisTestCase
      */
     protected function getExpectedCommands(?string $type = null): array
     {
-        $commands = array(
+        $commands = [
             /* commands operating on the key space */
             'EXISTS' => 'keys-all',
             'DEL' => 'keys-all',
@@ -329,6 +342,7 @@ class PredisStrategyTest extends PredisTestCase
             'SORT' => 'variable',
             'DUMP' => 'keys-first',
             'RESTORE' => 'keys-first',
+            'FLUSHDB' => 'keys-fake',
 
             /* commands operating on string values */
             'APPEND' => 'keys-first',
@@ -439,6 +453,9 @@ class PredisStrategyTest extends PredisTestCase
             'EVAL' => 'keys-script',
             'EVALSHA' => 'keys-script',
 
+            /* server */
+            'INFO' => 'keys-fake',
+
             /* commands performing geospatial operations */
             'GEOADD' => 'keys-first',
             'GEOHASH' => 'keys-first',
@@ -446,7 +463,10 @@ class PredisStrategyTest extends PredisTestCase
             'GEODIST' => 'keys-first',
             'GEORADIUS' => 'keys-georadius',
             'GEORADIUSBYMEMBER' => 'keys-georadius',
-        );
+
+            /* cluster */
+            'CLUSTER' => 'keys-fake',
+        ];
 
         if (isset($type)) {
             $commands = array_filter($commands, function (string $expectedType) use ($type) {

@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,15 +12,13 @@
 
 namespace Predis\Configuration\Option;
 
-use PredisTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
-use Predis\Configuration\OptionsInterface;
 use Predis\Command\Processor\KeyPrefixProcessor;
 use Predis\Command\RedisFactory;
+use Predis\Configuration\OptionsInterface;
+use PredisTestCase;
+use stdClass;
 
-/**
- *
- */
 class CommandsTest extends PredisTestCase
 {
     /**
@@ -95,10 +94,10 @@ class CommandsTest extends PredisTestCase
         /** @var OptionsInterface */
         $options = $this->getMockBuilder('Predis\Configuration\OptionsInterface')->getMock();
 
-        $input = array(
+        $input = [
             'FOO' => 'Predis\Command\RawCommand',
             'BAR' => 'Predis\Command\RawCommand',
-        );
+        ];
 
         $commands = $option->filter($options, $input);
 
@@ -117,11 +116,11 @@ class CommandsTest extends PredisTestCase
         /** @var OptionsInterface */
         $options = $this->getMockBuilder('Predis\Configuration\OptionsInterface')->getMock();
 
-        $input = array(
+        $input = [
             'ECHO' => null,
             'EVAL' => null,
-            'FOO'  => null,
-        );
+            'FOO' => null,
+        ];
 
         $commands = $option->filter($options, $input);
 
@@ -143,7 +142,7 @@ class CommandsTest extends PredisTestCase
         $commands = $this->getMockBuilder('Predis\Command\FactoryInterface')->getMock();
 
         $callable = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $callable
             ->expects($this->once())
@@ -164,13 +163,13 @@ class CommandsTest extends PredisTestCase
         /** @var OptionsInterface */
         $options = $this->getMockBuilder('Predis\Configuration\OptionsInterface')->getMock();
 
-        $dictionary = array(
+        $dictionary = [
             'FOO' => 'Predis\Command\RawCommand',
             'BAR' => 'Predis\Command\RawCommand',
-        );
+        ];
 
         $callable = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $callable
             ->expects($this->once())
@@ -263,14 +262,14 @@ class CommandsTest extends PredisTestCase
         $options = $this->getMockBuilder('Predis\Configuration\OptionsInterface')->getMock();
 
         $callable = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $callable
             ->expects($this->once())
             ->method('__invoke')
             ->with($this->isInstanceOf('Predis\Configuration\OptionsInterface'))
             ->willReturn(
-                new \stdClass()
+                new stdClass()
             );
 
         $option->filter($options, $callable);
@@ -289,7 +288,7 @@ class CommandsTest extends PredisTestCase
         /** @var OptionsInterface */
         $options = $this->getMockBuilder('Predis\Configuration\OptionsInterface')->getMock();
 
-        $option->filter($options, new \stdClass());
+        $option->filter($options, new stdClass());
     }
 
     /**

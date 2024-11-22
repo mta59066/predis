@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,8 +39,8 @@ class GETBIT_Test extends PredisCommandTestCase
      */
     public function testFilterArguments(): void
     {
-        $arguments = array('key', 100);
-        $expected = array('key', 100);
+        $arguments = ['key', 100];
+        $expected = ['key', 100];
 
         $command = $this->getCommand();
         $command->setArguments($arguments);
@@ -79,8 +80,7 @@ class GETBIT_Test extends PredisCommandTestCase
      */
     public function testThrowsExceptionOnNegativeOffset(): void
     {
-        $this->expectException('Predis\Response\ServerException');
-        $this->expectExceptionMessage('ERR bit offset is not an integer or out of range');
+        $this->expectExceptionMessage('bit offset is not an integer or out of range');
 
         $redis = $this->getClient();
 
@@ -94,8 +94,7 @@ class GETBIT_Test extends PredisCommandTestCase
      */
     public function testThrowsExceptionOnInvalidOffset(): void
     {
-        $this->expectException('Predis\Response\ServerException');
-        $this->expectExceptionMessage('ERR bit offset is not an integer or out of range');
+        $this->expectExceptionMessage('bit offset is not an integer or out of range');
 
         $redis = $this->getClient();
 

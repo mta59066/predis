@@ -3,7 +3,8 @@
 /*
  * This file is part of the Predis package.
  *
- * (c) Daniele Alessandri <suppakilla@gmail.com>
+ * (c) 2009-2020 Daniele Alessandri
+ * (c) 2021-2024 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,12 +12,9 @@
 
 namespace Predis\Cluster;
 
-use PredisTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use PredisTestCase;
 
-/**
- *
- */
 class RedisStrategyTest extends PredisTestCase
 {
     /**
@@ -33,9 +31,9 @@ class RedisStrategyTest extends PredisTestCase
         $this->assertSame(12182, $strategy->getSlotByKey('bar:{foo}:{baz}'));
 
         $this->assertSame(12182, $strategy->getSlotByKey('bar:{foo}:baz{}'));
-        $this->assertSame(9415,  $strategy->getSlotByKey('{}bar:{foo}:baz'));
+        $this->assertSame(9415, $strategy->getSlotByKey('{}bar:{foo}:baz'));
 
-        $this->assertSame(0,     $strategy->getSlotByKey(''));
+        $this->assertSame(0, $strategy->getSlotByKey(''));
         $this->assertSame(15257, $strategy->getSlotByKey('{}'));
     }
 
@@ -68,7 +66,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key');
+        $arguments = ['key'];
 
         foreach ($this->getExpectedCommands('keys-first') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -83,7 +81,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key');
+        $arguments = ['key'];
 
         foreach ($this->getExpectedCommands('keys-all') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -98,7 +96,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key1', 'key2');
+        $arguments = ['key1', 'key2'];
 
         foreach ($this->getExpectedCommands('keys-all') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -113,7 +111,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key:1', 'value1');
+        $arguments = ['key:1', 'value1'];
 
         foreach ($this->getExpectedCommands('keys-interleaved') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -128,7 +126,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key:1', 'value1', 'key:2', 'value2');
+        $arguments = ['key:1', 'value1', 'key:2', 'value2'];
 
         foreach ($this->getExpectedCommands('keys-interleaved') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -139,18 +137,33 @@ class RedisStrategyTest extends PredisTestCase
     /**
      * @group disconnected
      */
+    public function testFakeKeyCommandsWithOneKey(): void
+    {
+        $strategy = $this->getClusterStrategy();
+        $commands = $this->getCommandFactory();
+        $arguments = [];
+
+        foreach ($this->getExpectedCommands('keys-fake') as $commandID) {
+            $command = $commands->create($commandID, $arguments);
+            $this->assertNotNull($strategy->getSlot($command), $commandID);
+        }
+    }
+
+    /**
+     * @group disconnected
+     */
     public function testKeysForSortCommand(): void
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('{key}:1', 'value1', '{key}:2', 'value2');
+        $arguments = ['{key}:1', 'value1', '{key}:2', 'value2'];
 
         $commandID = 'SORT';
 
-        $command = $commands->create($commandID, array('{key}:1'));
+        $command = $commands->create($commandID, ['{key}:1']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', array('STORE' => '{key}:2')));
+        $command = $commands->create($commandID, ['{key}:1', ['STORE' => '{key}:2']]);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -161,7 +174,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key:1', 10);
+        $arguments = ['key:1', 10];
 
         foreach ($this->getExpectedCommands('keys-blockinglist') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -176,7 +189,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('key:1', 'key:2', 10);
+        $arguments = ['key:1', 'key:2', 10];
 
         foreach ($this->getExpectedCommands('keys-blockinglist') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -194,10 +207,10 @@ class RedisStrategyTest extends PredisTestCase
 
         $commandID = 'GEORADIUS';
 
-        $command = $commands->create($commandID, array('{key}:1', 10, 10, 1, 'km'));
+        $command = $commands->create($commandID, ['{key}:1', 10, 10, 1, 'km']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', 10, 10, 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3'));
+        $command = $commands->create($commandID, ['{key}:1', 10, 10, 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -211,10 +224,10 @@ class RedisStrategyTest extends PredisTestCase
 
         $commandID = 'GEORADIUSBYMEMBER';
 
-        $command = $commands->create($commandID, array('{key}:1', 'member', 1, 'km'));
+        $command = $commands->create($commandID, ['{key}:1', 'member', 1, 'km']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
 
-        $command = $commands->create($commandID, array('{key}:1', 'member', 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3'));
+        $command = $commands->create($commandID, ['{key}:1', 'member', 1, 'km', 'store', '{key}:2', 'storedist', '{key}:3']);
         $this->assertNotNull($strategy->getSlot($command), $commandID);
     }
 
@@ -225,7 +238,7 @@ class RedisStrategyTest extends PredisTestCase
     {
         $strategy = $this->getClusterStrategy();
         $commands = $this->getCommandFactory();
-        $arguments = array('%SCRIPT%', 1, 'key:1', 'value1');
+        $arguments = ['%SCRIPT%', 1, 'key:1', 'value1'];
 
         foreach ($this->getExpectedCommands('keys-script') as $commandID) {
             $command = $commands->create($commandID, $arguments);
@@ -239,11 +252,11 @@ class RedisStrategyTest extends PredisTestCase
     public function testKeysForScriptCommand(): void
     {
         $strategy = $this->getClusterStrategy();
-        $arguments = array('key:1', 'value1');
+        $arguments = ['key:1', 'value1'];
 
         /** @var \Predis\Command\CommandInterface|MockObject */
         $command = $this->getMockBuilder('Predis\Command\ScriptCommand')
-            ->onlyMethods(array('getScript', 'getKeysCount'))
+            ->onlyMethods(['getScript', 'getKeysCount'])
             ->getMock();
         $command
             ->expects($this->once())
@@ -269,10 +282,10 @@ class RedisStrategyTest extends PredisTestCase
         $strategy->setCommandHandler('get', null);
 
         $commands = $this->getCommandFactory();
-        $command = $commands->create('set', array('key', 'value'));
+        $command = $commands->create('set', ['key', 'value']);
         $this->assertNull($strategy->getSlot($command));
 
-        $command = $commands->create('get', array('key'));
+        $command = $commands->create('get', ['key']);
         $this->assertNull($strategy->getSlot($command));
     }
 
@@ -282,7 +295,7 @@ class RedisStrategyTest extends PredisTestCase
     public function testSettingCustomCommandHandler(): void
     {
         $callable = $this->getMockBuilder('stdClass')
-            ->addMethods(array('__invoke'))
+            ->addMethods(['__invoke'])
             ->getMock();
         $callable
             ->expects($this->once())
@@ -295,7 +308,7 @@ class RedisStrategyTest extends PredisTestCase
         $strategy->setCommandHandler('get', $callable);
 
         $commands = $this->getCommandFactory();
-        $command = $commands->create('get', array('key'));
+        $command = $commands->create('get', ['key']);
 
         $this->assertNotNull($strategy->getSlot($command));
     }
@@ -337,7 +350,7 @@ class RedisStrategyTest extends PredisTestCase
      */
     protected function getExpectedCommands(?string $type = null): array
     {
-        $commands = array(
+        $commands = [
             /* commands operating on the key space */
             'EXISTS' => 'keys-all',
             'DEL' => 'keys-all',
@@ -352,6 +365,7 @@ class RedisStrategyTest extends PredisTestCase
             'SORT' => 'keys-first', // TODO
             'DUMP' => 'keys-first',
             'RESTORE' => 'keys-first',
+            'FLUSHDB' => 'keys-fake',
 
             /* commands operating on string values */
             'APPEND' => 'keys-first',
@@ -462,6 +476,9 @@ class RedisStrategyTest extends PredisTestCase
             'EVAL' => 'keys-script',
             'EVALSHA' => 'keys-script',
 
+            /* server */
+            'INFO' => 'keys-fake',
+
             /* commands performing geospatial operations */
             'GEOADD' => 'keys-first',
             'GEOHASH' => 'keys-first',
@@ -469,7 +486,10 @@ class RedisStrategyTest extends PredisTestCase
             'GEODIST' => 'keys-first',
             'GEORADIUS' => 'keys-georadius',
             'GEORADIUSBYMEMBER' => 'keys-georadius',
-        );
+
+            /* cluster */
+            'CLUSTER' => 'keys-fake',
+        ];
 
         if (isset($type)) {
             $commands = array_filter($commands, function (string $expectedType) use ($type) {
