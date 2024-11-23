@@ -724,7 +724,6 @@ class SentinelReplication implements ReplicationInterface
 
                 break;
             } catch (CommunicationException $exception) {
-                $this->wipeServerList();
                 $exception->getConnection()->disconnect();
 
                 if ($retries === $this->retryLimit) {
