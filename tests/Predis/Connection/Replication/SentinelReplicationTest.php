@@ -1517,6 +1517,155 @@ class SentinelReplicationTest extends PredisTestCase
         $replication->updateSentinels();
     }
 
+    /**
+     * @group disconnected
+     */
+    public function testDiscardsUnreachableSlaveAndExecutesReadOnlyCommandOnNextSlave(): void
+    {
+        $sentinel1 = $this->getMockSentinelConnection('tcp://127.0.0.1:5381?role=sentinel');
+
+        $commands = $this->getCommandFactory();
+        $cmdExists = $commands->create('exists', ['key']);
+
+        $master = $this->getMockConnection('tcp://127.0.0.1:6379?role=master');
+        $master
+            ->expects($this->never())
+            ->method('executeCommand');
+
+        $slave1 = $this->getMockConnection('tcp://127.0.0.1:6380?role=slave');
+        $slave1
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willThrowException(
+                new Connection\ConnectionException($slave1)
+            );
+
+        $slave2 = $this->getMockConnection('tcp://127.0.0.1:6381?role=slave');
+        $slave2
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willReturn(1);
+
+        $replication = $this->getReplicationConnection('svc', [$sentinel1]);
+
+        $replication->add($master);
+        $replication->add($slave1);
+        $replication->add($slave2);
+
+        $replication->switchTo($slave1);
+
+        $response = $replication->executeCommand($cmdExists);
+
+        $this->assertSame(1, $response);
+        $this->assertNull($replication->getConnectionById('127.0.0.1:6380'));
+        $this->assertSame($slave2, $replication->getCurrent());
+    }
+
+    /**
+     * @group disconnected
+     */
+    public function testDiscardsUnreachableSlavesAndExecutesReadOnlyCommandOnMaster(): void
+    {
+        $sentinel1 = $this->getMockSentinelConnection('tcp://127.0.0.1:5381?role=sentinel');
+
+        $commands = $this->getCommandFactory();
+        $cmdExists = $commands->create('exists', ['key']);
+
+        $master = $this->getMockConnection('tcp://127.0.0.1:6379?role=master');
+        $master
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willReturn(1);
+
+        $slave1 = $this->getMockConnection('tcp://127.0.0.1:6380?role=slave');
+        $slave1
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willThrowException(
+                new Connection\ConnectionException($slave1)
+            );
+
+        $slave2 = $this->getMockConnection('tcp://127.0.0.1:6381?role=slave');
+        $slave2
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willThrowException(
+                new Connection\ConnectionException($slave1)
+            );
+
+        $replication = $this->getReplicationConnection('svc', [$sentinel1]);
+
+        $replication->add($master);
+        $replication->add($slave1);
+        $replication->add($slave2);
+
+        $replication->switchTo($slave1);
+
+        $response = $replication->executeCommand($cmdExists);
+
+        $this->assertSame(1, $response);
+        $this->assertNull($replication->getConnectionById('127.0.0.1:6380'));
+        $this->assertNull($replication->getConnectionById('127.0.0.1:6381'));
+    }
+
+    /**
+     * @group disconnected
+     */
+    public function testSucceedOnReadOnlyCommandAndNoConnectionSetAsMaster(): void
+    {
+        $sentinel1 = $this->getMockSentinelConnection('tcp://127.0.0.1:5381?role=sentinel');
+
+        $commands = $this->getCommandFactory();
+        $cmdExists = $commands->create('exists', ['key']);
+
+        $slave1 = $this->getMockConnection('tcp://127.0.0.1:6380?role=slave');
+        $slave1
+            ->expects($this->once())
+            ->method('executeCommand')
+            ->with($cmdExists)
+            ->willThrowException(
+                new Connection\ConnectionException($slave1)
+            );
+
+        $replication = $this->getReplicationConnection('svc', [$sentinel1]);
+
+        $replication->add($slave1);
+
+        $response = $replication->executeCommand($cmdExists);
+
+        $this->assertSame(1, $response);
+    }
+
+    /**
+     * @group disconnected
+     */
+    public function testFailsOnWriteCommandAndNoConnectionSetAsMaster(): void
+    {
+        $this->expectException('Exception');
+        $this->expectExceptionMessage('No master server available for replication');
+
+        $sentinel1 = $this->getMockSentinelConnection('tcp://127.0.0.1:5381?role=sentinel');
+
+        $commands = $this->getCommandFactory();
+        $cmdSet = $commands->create('set', ['key', 'value']);
+
+        $slave1 = $this->getMockConnection('tcp://127.0.0.1:6380?role=slave');
+        $slave1
+            ->expects($this->never())
+            ->method('executeCommand');
+
+        $replication = $this->getReplicationConnection('svc', [$sentinel1]);
+
+        $replication->add($slave1);
+
+        $response = $replication->executeCommand($cmdSet);
+    }
+
     // ******************************************************************** //
     // ---- HELPER METHODS ------------------------------------------------ //
     // ******************************************************************** //
